@@ -1,0 +1,33 @@
+# Direct Port of constructParams.m
+import numpy as np
+
+def construct_admm_parameters(dataset, labelset, epsilon, bias, flag):
+    datacells = dataset
+    labelcells = labelset
+    
+    N = datacells.size
+    T = np.zeros((N,1))
+    
+    num_pairs_max = 0;
+    num_intensity = 0;
+    
+    # Collect Statistics of the Dataset
+    for n in range(N):
+        # TODO: See if D is actually used
+        D = T[n] = datacells[n].size
+        num_pairs_max += T[n]*(T[n]+1)/2
+        
+    # initialize the components for OSVR problem
+    # pre-allocate storage for A and e for efficiency
+    # TODO: Bug? Seems to use last value assigned to D in for loop
+    A = np.zeros((num_intensity+num_pairs_max, D+bias))
+    c = np.ones((num_intensity+num_pairs_max, 1))
+    weight = np.ones((num_intensity+num_pairs_max, 1))
+    idx_row_I = 0
+    idx_row_P = num_intensity
+    num_pairs = 0
+    
+    for n in range(N):
+        data = datacells[n]
+        label = labelcells[n]
+    
