@@ -12,6 +12,7 @@ import numpy as np
 from skimage.feature import local_binary_pattern
 #from skimage.feature import multiblock_lbp
 from PIL import Image
+import scipy.io as sio
 
 CKPLUSPATH = "/home/ubuntu/workspace/frame-normaliser/ckplus"
 IMAGEPATH = CKPLUSPATH + "/cohn-kanade-images/"
@@ -344,8 +345,13 @@ def get_data_matrix(usable_frames, master_frame):
         
     features_t = []
     for feature in features:
-        features_t += [map(list, zip(*feature))]
+        features_t += [np.array(feature).T]
+    
+    #Make MATLAB ready
+    features_mlr = np.zeros(len(features_t), dtype=object)
+    features_mlr[:] = features_t
 
-    return features, labels, features_t
+    return features_mlr, np.array(labels)
 
-
+#sio.savemat('custom.mat', {'my_train_data_seq' : np.array(dm[0]), 'my_train_label_seq' : np.array(dm[1])})
+#
