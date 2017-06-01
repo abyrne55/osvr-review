@@ -308,7 +308,7 @@ def get_usable_frames(emotion_num):
     
     return result
 
-def get_data_matrix(usable_frames, master_frame):
+def get_train_matrix(usable_frames, master_frame):
     """
     Takes in a list of usable frames (from get_usable_frames) and outputs the 
     feature and label matrices, ready to be converted to MATLAB. The master_frame
@@ -342,16 +342,30 @@ def get_data_matrix(usable_frames, master_frame):
             features[count].append(frame_data[0]) 
             labels[count].append(frame_data[1])
         count += 1
-        
+    
+    # Hack to make data MATLAB-ready
     features_t = []
     for feature in features:
         features_t += [np.array(feature).T]
-    
-    #Make MATLAB ready
     features_mlr = np.zeros(len(features_t), dtype=object)
     features_mlr[:] = features_t
 
     return features_mlr, np.array(labels)
+    
+def get_test_matrix(usable_frames, master_frame):
+    
+    test_data = []
+    test_label = []
+    
+    for frame_descriptor, intensity in usable_frames:
+        frame = crop_and_align(frame_descriptor, master_frame, size=100)
+        
+        if frame is not None:
+            test_data += [get_feature_vector(frame)]
+            test_label.append(intensity)
+            
+    return np.array(test_data).T, np.array(test_label)
 
-#sio.savemat('custom.mat', {'my_train_data_seq' : np.array(dm[0]), 'my_train_label_seq' : np.array(dm[1])})
+    
+#sio.savemat('train_data.mat', {'my_train_data_seq' : np.array(dm[0]), 'my_train_label_seq' : np.array(dm[1])})
 #
