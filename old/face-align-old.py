@@ -10,13 +10,11 @@ import glob
 import os
 import numpy as np
 from skimage.feature import local_binary_pattern
-#from skimage.feature import multiblock_lbp
 from PIL import Image
 
 CKPLUSPATH = "/home/ubuntu/workspace/frame-normaliser/ckplus"
 IMAGEPATH = CKPLUSPATH + "/cohn-kanade-images/"
 LANDMARKPATH = CKPLUSPATH + "/Landmarks/"
-EMOTIONPATH = CKPLUSPATH + "/Emotion/"
 
 def load_frame(subject_id, seq_num, frame_id):
     seq_num_fmt = format(seq_num, '03')
@@ -24,12 +22,7 @@ def load_frame(subject_id, seq_num, frame_id):
     filename = subject_id + "_" + seq_num_fmt + "_" + frame_id_fmt + ".png"
     path_to_image_file = IMAGEPATH + subject_id + "/" + seq_num_fmt + "/" + filename
     
-    try:
-        result = Image.open(path_to_image_file).convert('L')
-    except:
-        result = None
-        
-    return result
+    return Image.open(path_to_image_file)
 
 def load_eye_landmarks(subject_id, seq_num, frame_id):
     seq_num_fmt = format(seq_num, '03')
@@ -84,10 +77,6 @@ def align_eyes(src_subject_id, src_seq_num, src_frame_id, dst_subject_id, dst_se
     
     src_frame = load_frame(src_subject_id, src_seq_num, src_frame_id)
     dst_frame = load_frame(dst_subject_id, dst_seq_num, dst_frame_id)
-    
-    #Err check
-    if src_frame is None or dst_frame is None:
-        return None
     
     src_landmarks = load_eye_landmarks(src_subject_id, src_seq_num, src_frame_id)
     dst_landmarks = load_eye_landmarks(dst_subject_id, dst_seq_num, dst_frame_id)
@@ -172,10 +161,10 @@ def crop_face_and_landmarks(img, landmark_points):
     cropped_landmark_points = []
     
     for eye_pt in landmark_points:
-        ## Cropping boundry check (error condition doesn't actually affect results)
-        # if (eye_pt[0] < face_bounds[0] or eye_pt[0] > face_bounds[0] + face_bounds[2]
-        #     or eye_pt[1] < face_bounds[1] or eye_pt[1] > face_bounds[1] + face_bounds[3]):
-        #     print("WARNING: Eyes outside of facial bounds!")
+        if (eye_pt[0] < face_bounds[0] or eye_pt[0] > face_bounds[0] + face_bounds[2]
+            or eye_pt[1] < face_bounds[1] or eye_pt[1] > face_bounds[1] + face_bounds[3]):
+            print("WARNING: Eyes outside of facial bounds!")
+        
         cropped_landmark_points.append([eye_pt[0]-face_bounds[0], eye_pt[1]-face_bounds[1]])
         
     cropped_image=imgCrop(pil_im, face_bounds, boxScale=0.9)
@@ -215,10 +204,6 @@ def crop_and_align(src, dst, size=None):
     src_frame_raw = load_frame(src_subject_id, src_seq_num, src_frame_id)
     dst_frame_raw = load_frame(dst_subject_id, dst_seq_num, dst_frame_id)
     
-    #Err check
-    if src_frame_raw is None or dst_frame_raw is None:
-        return None
-    
     src_landmarks_raw = load_eye_landmarks(src_subject_id, src_seq_num, src_frame_id)
     dst_landmarks_raw = load_eye_landmarks(dst_subject_id, dst_seq_num, dst_frame_id)
     
@@ -242,110 +227,11 @@ f1055 = ["S010",5,5]
 def get_lbp_histogram(img):
     """
     Produces a normalised LBP histogram with 9 bins from a greyscale image. Uses
-    standard non-rotation-invariant uniform LBP with 8 neighborhood points in 
-    radius 5
+    standard uniform LBP with 8 neighborhood points in radius 5
     
     :param img: the input image (a 2D array of greyscale values)
     :returns: the normalised histogram
     """
-    lbp_image=local_binary_pattern(img,8,2,method='nri_uniform')
-    histogram, edges = np.histogram(lbp_image, bins=range(60), density=True)
+    lbp_image=local_binary_pattern(img,8,5,method='uniform')
+    histogram, edges = np.histogram(lbp_image, bins=9, density=True)
     return histogram
-    
-def get_gridded_image(img, rows=5, cols=5):
-    """
-    Cuts an image into a grid and returns a list containing each cell as a 
-    2D array of its greyscale intensities
-    """
-    cell_width = img.size[0]/rows
-    cell_height = img.size[1]/cols
-    whole_image = np.array(img.getdata()).reshape(img.size)
-    result = []
-    for col in range(0,img.size[1],cell_height):
-        for row in range(0, img.size[0],cell_width):
-            result.append(whole_image[row:row+cell_width,col:col+cell_height])
-            
-    return result
-    
-def get_feature_vector(img):
-    """
-    Generates a 1575-dimension feature vector from an image using the LBP 
-    histogram method described in the paper
-    """
-    image_cell_list = get_gridded_image(img)
-    return np.array(map(get_lbp_histogram, image_cell_list)).flatten().tolist()
-    
-def get_usable_frames(emotion_num):
-    """
-    Produces a list of usable frame descriptors and their emotion intensities
-    """
-    result = []
-    
-    #traverse all dirs
-    for subject_dir in os.listdir(EMOTIONPATH):
-        #check if subjectdir
-        if subject_dir.startswith("S"):
-            emotion_label_path = EMOTIONPATH + subject_dir + "/"
-            #traverse all seq dirs
-            for dirname in os.listdir(emotion_label_path):
-                #check if item is sequence directory
-                #now check if label file exists for that seq
-                if os.path.isdir(emotion_label_path+dirname) and len(os.listdir(emotion_label_path+dirname)) > 0 and os.listdir(emotion_label_path+dirname)[0].endswith("_emotion.txt"):
-                    with open(emotion_label_path+dirname+"/"+os.listdir(emotion_label_path+dirname)[0]) as em_file:
-                        em_num = int(float(em_file.read().strip(' \t\n\r')))
-                        if em_num == emotion_num:
-                            #Boom, we got a usable sequence
-                            seq_num = int(dirname)
-                            end_frame_num = int(os.listdir(emotion_label_path+dirname)[0].split("_")[2])
-                            
-                            frame_descriptors = []
-                            for frame_num in range(1, end_frame_num+1):
-                                frame_descriptors.append([subject_dir,seq_num,frame_num])
-                            intensities = np.linspace(0, 10, end_frame_num).tolist()
-                            
-                            result += list(zip(frame_descriptors,intensities))
-    
-    return result
-
-def get_data_matrix(usable_frames, master_frame):
-    """
-    Takes in a list of usable frames (from get_usable_frames) and outputs the 
-    feature and label matrices, ready to be converted to MATLAB. The master_frame
-    is a descriptor determines the alignment of each image prior to processing
-    """
-    
-    data = {}
-    
-    for frame_descriptor, intensity in usable_frames:
-        frame = crop_and_align(frame_descriptor, master_frame, size=100)
-
-        if frame is not None:
-            feature = get_feature_vector(frame)
-            label = [frame_descriptor[2], intensity]
-            
-            #If we havent seen this sequence before, set up the data struct
-            key = "-".join([frame_descriptor[0], str(frame_descriptor[1])])
-            if key not in data:
-                data[key] = []
-                
-            data[key].append([feature, label])
-    
-    features = [None] * len(data)
-    labels =  [None] * len(data)
-    
-    count = 0
-    for key, sequence_data in data.iteritems():
-        features[count] = []
-        labels[count] = []
-        for frame_data in sequence_data:
-            features[count].append(frame_data[0]) 
-            labels[count].append(frame_data[1])
-        count += 1
-        
-    features_t = []
-    for feature in features:
-        features_t += [map(list, zip(*feature))]
-
-    return features, labels, features_t
-
-
