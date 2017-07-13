@@ -26,7 +26,7 @@ def load_MAT(var_name):
 
 
 # Font must be provided in working directory
-FONT_SIZE = 10
+FONT_SIZE = 12
 FONT = ImageFont.truetype("fonts/FreeMono.otf", size=FONT_SIZE)
 FONT_BOLD = ImageFont.truetype("fonts/FreeMonoBold.otf", size=FONT_SIZE)
 FONT_EM = ImageFont.truetype(
@@ -60,43 +60,54 @@ class LabeledFrame(object):
         else:
             try:
                 self.clean_image = Image.open(filename)
+                self.clean_image = self.clean_image.convert(mode="RGB")
 
             except IOError:
                 print("ERROR: Failed to open " + filename)
                 self.clean_image = Image.new("RGB", (400, 400), "grey")
 
     def label(self):
-        error = abs(self.intensity_actual - self.intensity_predicted)
-        if error == 0:
-            e_color = "aqua"
-        elif error < 0.75:
-            e_color = "chartreuse"
-        elif error < 2.5:
-            e_color = "gold"
-        else:
-            e_color = "crimson"
-
+        """
+        Draw information onto the frame
+        """
+        
+        # error = abs(self.intensity_actual - self.intensity_predicted)
+        # if error == 0:
+        #     e_color = "aqua"
+        # elif error < 0.75:
+        #     e_color = "chartreuse"
+        # elif error < 2.5:
+        #     e_color = "gold"
+        # else:
+        #    e_color = "crimson"
+        e_color = "white"
         self.labeled_image = self.clean_image.copy()
         draw = ImageDraw.Draw(self.labeled_image)
 
-        draw.text((10, 240 - 5 * (FONT_SIZE + 10)), "Filename: " +
-                  self.filename, "white", font=FONT)
-        draw.text((10, 240 - 4 * (FONT_SIZE + 10)), "Frame ID: " +
+        draw.text((10, 490 - 5 * (FONT_SIZE + 10)), "Filename: " +
+                  os.path.basename(self.filename), "white", font=FONT)
+        draw.text((10, 490 - 4 * (FONT_SIZE + 10)), "Frame ID: " +
                   str(self.frame_id), "white", font=FONT)
 
         # draw.text((10, 3 * (FONT_SIZE + 10)),
         #          "Intensities", "white", font=FONT_BOLD)
-        draw.text((10, 240 - 3 * (FONT_SIZE + 10)), "Ground Truth: " +
+        draw.text((10, 490 - 3 * (FONT_SIZE + 10)), "Ground Truth: " +
                   str(self.intensity_actual), "white", font=FONT)
-        draw.text((10, 240 - 2 * (FONT_SIZE + 10)), "Predicted:    " +
+        draw.text((10, 490 - 2 * (FONT_SIZE + 10)), "Predicted:    " +
                   str(self.intensity_predicted), "white", font=FONT)
-        draw.text((10, 240 - 1 * (FONT_SIZE + 10)),
+        draw.text((10, 490 - 1 * (FONT_SIZE + 10)),
                   "Error:        " + str(error), e_color, font=FONT)
 
         return self.labeled_image
 
     def overlay_image(self, image):
-        self.labeled_image.paste(image, (210, 140), image)
+        """
+        Overlay an image (like a graph) in the bottom right-hand corner of frame
+        
+        :param image: the image to insert
+        :returns: the new image
+        """
+        self.labeled_image.paste(image, (470, 380), image)
 
         return self.labeled_image
 
@@ -239,5 +250,58 @@ def test_lf_rdata_rframes_nc():
     gif_images[0].save(output_dir + "animated.gif", format="gif",
                        save_all=True, append_images=gif_images[1:], duration=120)
 
+def test_77out(images, output_dir):
+    """
+    Test for the LabeledFrame class with real data and real frames from the leave 77
+    out experiment
+    
+    :param images: a list of full paths to the frames used
+    :param output_dir: the path to the directory where the animated GIF should be saved
+    """
 
-test_lf_rdata_rframes_nc()
+    # Intensities for each frame
+    intensities_predicted = load_MAT("dec_values").flatten().tolist()
+    intensities_actual = load_MAT("my_test_label").flatten().tolist()
+    # IDs for each frame
+    frame_ids = range(0, 140)
+
+    gif_images = []
+
+    plt.figure(figsize=(1.5, 1.15), dpi=100)
+    plt.axis('off')
+    plt.plot(frame_ids, intensities_predicted, "b-", label="predicted")
+    plt.plot(frame_ids, intensities_actual, "r-", label="actual")
+    #plt.vlines(self.frame_id,-1, 10)
+    #plt.legend(loc='upper right')
+    data_max = max(intensities_predicted + intensities_actual)
+    data_min = min(intensities_predicted + intensities_actual)
+
+    # Loop through provided frame ids
+    for p, f_id, i_pred, i_act in zip(images, frame_ids, intensities_predicted, intensities_actual):
+        #print("Loading " + input_dir + str(f_id) + file_suffix)
+        frame = LabeledFrame(p, f_id, i_pred, i_act)
+        print("Labeling " + frame.filename)
+        l_image = frame.label()
+
+        # Add vertical line for this frame
+        ln = plt.vlines(f_id, data_min, data_max,
+                        linestyles='solid', linewidth=".5", zorder=3)
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', transparent=True,
+                    bbox_inches='tight', pad_inches=0)
+        # Remove the vert line for the next figure
+        ln.remove()
+
+        buf.seek(0)
+
+        overlay = Image.open(buf)
+
+        l_image = frame.overlay_image(overlay)
+
+        gif_images.append(l_image)
+
+    # Generate GIF
+    print("Saving animated GIF")
+    gif_images[0].save(output_dir + "animated.gif", format="gif",
+                       save_all=True, append_images=gif_images[1:], duration=220)
