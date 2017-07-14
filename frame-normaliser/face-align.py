@@ -261,8 +261,7 @@ def crop_face_and_landmarks(img, landmark_points):
     :param landmark_points: np array for eyes [[Lx,Ly],[Rx,Ry]]
     :returns: a tuple containing the cropped image and the adjusted eye landmark points
     """
-    faceCascade = cv.Load(
-        "/usr/share/opencv/haarcascades/haarcascade_frontalface_alt.xml")
+    faceCascade = cv.Load("haarcascade_frontalface_alt.xml")
 
     pil_im = img
     cv_im = pil2cvGrey(pil_im)
