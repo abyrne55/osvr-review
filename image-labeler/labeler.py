@@ -261,7 +261,7 @@ def test_77out(images, output_dir):
 
     # Intensities for each frame
     intensities_predicted = load_MAT("dec_values").flatten().tolist()
-    intensities_actual = load_MAT("my_test_label").flatten().tolist()
+    intensities_actual = load_MAT("test_label").flatten().tolist()
     # IDs for each frame
     frame_ids = range(0, 140)
 

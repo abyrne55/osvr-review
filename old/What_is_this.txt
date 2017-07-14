@@ -1,0 +1,6 @@
+This directory just contains some of my previous attempts at porting the
+original MATLAB scripts to python, as well as some random MATLAB files that were
+used for testing at one point or another. I decided that my time was better
+spent designing around the MATLAB code rather than trying to replace it.
+Nonetheless, I've included the old code here on the off chance that it proves
+marginally useful to someone.
