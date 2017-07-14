@@ -61,10 +61,10 @@ source activate falign
 ipython -i face-align.py
 ```
 
-You'll usually start by generating a list of "usable frames", or frames that depict a certain emotion. As an example, let's generate a training dataset of the first ten neutral (0), angry (1), and disgusted (3) frames (you can find the integer codes for other emotions in the CK+ readme), and a testing dataset of the last five frames of each of those emotions. Note that these operations are IO-bound and may take a while.
+You'll usually start by generating a list of "usable frames", or frames that depict a certain emotion. As an example, let's generate a training dataset of all but the last 20 neutral (0), angry (1), and disgusted (3) frames (you can find the integer codes for other emotions in the CK+ readme), and a testing dataset of the last 20 frames of each of those emotions. Note that these operations are IO-bound and may take a while.
 ```python
-uf_train = get_usable_frames(0)[:10] + get_usable_frames(1)[:10] + get_usable_frames(3)[:10]
-uf_test = get_usable_frames(0)[-10:] + get_usable_frames(1)[-10:] + get_usable_frames(3)[-10:]
+uf_train = get_usable_frames(0)[:-20] + get_usable_frames(1)[:-20] + get_usable_frames(3)[:-20]
+uf_test = get_usable_frames(0)[-20:] + get_usable_frames(1)[-20:] + get_usable_frames(3)[-20:]
 ```
 *Tip: use the `cpaste` command in ipython to paste several lines of code at once*
 
@@ -101,10 +101,6 @@ pickle.dump(pt_test, open('pt_test.p', 'wb'))
 
 exit
 ```
-```bash
-# Once back to your BASH shell, you can deactivate the `falign` environment if you wish
-source deactivate
-```
 
 ### Using the output from the MATLAB script
 After executing the `main.m` script in MATLAB, save the original `test_label` and the resulting `dec_values` matrices to a `.mat` file. Find the `MATLAB_FILENAME` variable in the `labeler.py` script and edit it to match the full path of the `.mat` file you just saved. Finally, `cd` back to where you cloned this repo and enter the labeler environment
@@ -130,6 +126,11 @@ test_77out(pt_test, output_dir)
 ```
 
 The resulting animated GIF will be saved in the `output_dir` specified. The GIF will probably become quite large when working with more than 100 or so testing frames, so it might be wise to convert it to a more space-efficient format like MP4 using one of the many free online converters available.
+
+```bash
+# Tip: After you exit() ipython and return to your shell, you may return to your default python environment
+source deactivate
+```
 
 ### Additional usage
 There are a few additional functions present in the code that were not demonstrated in this README but may be useful to you. You're encouraged to read through the PyDoc comments in `face-align.py` and `labeler.py` for a better understanding of the code.

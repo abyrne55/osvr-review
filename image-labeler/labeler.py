@@ -71,7 +71,7 @@ class LabeledFrame(object):
         Draw information onto the frame
         """
         
-        # error = abs(self.intensity_actual - self.intensity_predicted)
+        error = abs(self.intensity_actual - self.intensity_predicted)
         # if error == 0:
         #     e_color = "aqua"
         # elif error < 0.75:
@@ -263,7 +263,7 @@ def test_77out(images, output_dir):
     intensities_predicted = load_MAT("dec_values").flatten().tolist()
     intensities_actual = load_MAT("test_label").flatten().tolist()
     # IDs for each frame
-    frame_ids = range(0, 140)
+    frame_ids = range(0, len(intensities_actual))
 
     gif_images = []
 
